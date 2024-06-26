@@ -1,34 +1,31 @@
 use crate::config::Configuration;
-use crate::depth_cache::DepthCache;
-use crate::telegram::TelegramBot;
 use crate::trading_pair::TradingPair;
 use crate::triangular_relationship::TriangularRelationship;
-use binance::account::*;
-use binance::api::*;
 use binance::model::*;
 use console::style;
 // use rayon::prelude::*;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
+use crate::telegram_interface::TelegramBotInterface;
+use crate::binance_interface::BinanceAccount;
+use crate::depth_cache_interface::DepthCacheInterface;
 
 pub struct CalculationCluster {
   relationships: HashMap<String, TriangularRelationship>,
-  depth_cache: DepthCache,
+  depth_cache: Box<dyn DepthCacheInterface>,
   config: Configuration,
-  account: Account,
-  bot: TelegramBot,
+  account: Box<dyn BinanceAccount>,
+  bot: Box<dyn TelegramBotInterface>,
 }
 
 impl CalculationCluster {
   pub fn new(
     relationships: HashMap<String, TriangularRelationship>,
-    depth_cache: DepthCache,
+    depth_cache: Box<dyn DepthCacheInterface>,
     config: Configuration,
+    account: Box<dyn BinanceAccount>,
+    bot: Box<dyn TelegramBotInterface>,
   ) -> CalculationCluster {
-    let config_clone = config.clone();
-    let account: Account = Binance::new(Some(config_clone.api_key), Some(config_clone.api_secret));
-    let config_clone = config.clone();
-    let bot: TelegramBot = TelegramBot::new(config_clone);
     if config.telegram_enabled {
       bot.start();
     }
@@ -104,7 +101,7 @@ impl CalculationCluster {
     }
     format!("{:.1$}", quantity, power).parse().unwrap()
   }
-  fn calculate_relationship(&self, relationship: TriangularRelationship) -> Deal {
+  pub fn calculate_relationship(&self, relationship: TriangularRelationship) -> Deal {
     let pairs = relationship.get_trading_pairs();
     let pair_names = relationship.get_pairs();
     let pair_actions = relationship.get_actions();
@@ -338,7 +335,7 @@ impl CalculationCluster {
 }
 
 #[derive(Debug, Clone)]
-struct Deal {
+pub struct Deal {
   profit: f64,
   timestamp: u64,
   actions: Vec<Action>,
@@ -373,7 +370,7 @@ impl Deal {
 }
 
 #[derive(Debug, Clone)]
-struct Action {
+pub struct Action {
   pair: TradingPair,
   action: String,
   quantity: f64,

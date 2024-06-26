@@ -12,14 +12,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 
-#[derive(Debug, Clone)]
-pub struct LocalOrderBook {
-  pub first_event: bool,
-  pub last_update_id: u64,
-  pub event_time: u64,
-  pub bids: Vec<Bids>,
-  pub asks: Vec<Asks>,
-}
+use crate::depth_cache_interface::{DepthCacheInterface, LocalOrderBook};
+
 
 #[derive(Debug)]
 pub struct DepthCache {
@@ -27,7 +21,15 @@ pub struct DepthCache {
   in_tx: Mutex<Sender<String>>,
   out_rx: Mutex<Receiver<LocalOrderBook>>,
 }
-
+impl DepthCacheInterface for DepthCache {
+  // Requires data from HashMap
+  fn get_depth(&self, symbol: &str) -> LocalOrderBook {
+    if let Err(e) = self.in_tx.lock().unwrap().send(symbol.to_string()) {
+      panic!("Failed to send data to thread, err={}", e);
+    };
+    self.out_rx.lock().unwrap().recv().unwrap()
+  }
+}
 impl DepthCache {
   // Constructor
   pub fn new(
@@ -151,13 +153,7 @@ impl DepthCache {
       out_rx: out_rx_mutex,
     }
   }
-  // Requires data from HashMap
-  pub fn get_depth(&self, symbol: &str) -> LocalOrderBook {
-    if let Err(e) = self.in_tx.lock().unwrap().send(symbol.to_string()) {
-      panic!("Failed to send data to thread, err={}", e);
-    };
-    self.out_rx.lock().unwrap().recv().unwrap()
-  }
+  
 }
 
 fn get_snapshot(market: &Market, symbol: &str) -> OrderBook {

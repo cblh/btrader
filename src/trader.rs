@@ -3,6 +3,8 @@ use crate::config::Configuration;
 use crate::depth_cache::DepthCache;
 use crate::trading_pair::TradingPair;
 use crate::triangular_relationship::TriangularRelationship;
+use crate::binance_account::RealBinanceAccount;
+use crate::telegram_bot::RealTelegramBot;
 use binance::api::*;
 use binance::general::*;
 use binance::model::*;
@@ -148,7 +150,11 @@ impl bTrader {
       socket_pairs.len()
     );
     let depth_cache = DepthCache::new(&socket_pairs, 8, 1);
-    let calculation_cluster = CalculationCluster::new(relationships, depth_cache, config);
+    let config_clone = config.clone();
+    let account = Box::new(RealBinanceAccount::new(Some(config_clone.api_key), Some(config_clone.api_secret)));
+    let config_clone = config.clone();
+    let bot = Box::new(RealTelegramBot::new(config_clone));
+    let calculation_cluster = CalculationCluster::new(relationships, Box::new(depth_cache), config, account, bot);
     bTrader {
       calculation_cluster,
     }

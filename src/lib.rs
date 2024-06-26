@@ -1,7 +1,12 @@
 pub mod calculation_cluster;
 pub mod config;
 pub mod depth_cache;
+pub mod depth_cache_interface;
 pub mod telegram;
 pub mod trader;
 pub mod trading_pair;
 pub mod triangular_relationship;
+pub mod binance_account;
+pub mod telegram_bot;
+pub mod telegram_interface;
+pub mod binance_interface;
